@@ -13,6 +13,7 @@ O projeto está hospedado no GitHub Pages e pode ser acessado diretamente:
 [Acesse o Gerador de Desculpas Improváveis](https://moulieri-company.github.io/Gerador-de-Desculpas-Improvaveis/)
 
 ✨ Tecnologias Utilizadas
+
 Este projeto é um single-file application, ou seja, tudo está contido em um único arquivo HTML, utilizando:
 
 HTML5: Estrutura base do site.
