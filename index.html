@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Desculpas Criativas</title>
+    <!-- Carrega o Tailwind CSS para estilização fácil e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configuração de tema do Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-blue': '#4c51bf', // Indigo
+                        'secondary-yellow': '#f6e05e', // Yellow
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Define a fonte Inter como padrão para melhor estética */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4 font-sans">
+
+    <!-- Container Principal do Gerador de Desculpas -->
+    <div class="w-full max-w-xl bg-white shadow-2xl rounded-xl p-8 space-y-6 transform hover:scale-[1.01] transition duration-300">
+        <header class="text-center">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-primary-blue mb-2">
+                Gerador de Desculpas Improváveis
+            </h1>
+            <p class="text-gray-600 text-lg">
+                Deixe a IA criar a desculpa engraçadinha 😎!
+            </p>
+        </header>
+
+        <!-- Entrada de Tópico Personalizado -->
+        <div>
+            <label for="topico" class="block text-lg font-medium text-gray-700 mb-2">Qual situação precisa de uma desculpa?</label>
+            <input type="text" id="topico" placeholder="Ex: Atraso para o trabalho, esqueci o aniversário, etc." class="mt-1 block w-full pl-4 pr-4 py-3 text-base border-gray-300 focus:outline-none focus:ring-primary-blue focus:border-primary-blue sm:text-lg rounded-lg shadow-md transition duration-150 ease-in-out shadow-inner" />
+        </div>
+
+        <!-- Botão de Geração -->
+        <button id="btn-gerar" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-xl font-semibold text-white bg-primary-blue hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-blue transition duration-150 ease-in-out transform hover:scale-105 active:scale-95">
+            Gerar Desculpa
+        </button>
+
+        <!-- Área de Resultado -->
+        <div id="resultado-card" class="hidden border-t-4 border-secondary-yellow pt-6 space-y-4">
+            <h2 class="text-2xl font-bold text-gray-800">Sua Desculpa É:</h2>
+            
+            <!-- Indicador de Carregamento (Spinner) -->
+            <div id="loading-indicator" class="hidden flex justify-center items-center py-4">
+                <svg class="animate-spin -ml-1 mr-3 h-6 w-6 text-primary-blue" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="text-primary-blue font-semibold">Criando uma realidade alternativa...</span>
+            </div>
+
+            <p id="desculpa-gerada" class="p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-xl italic leading-relaxed select-text shadow-inner">
+                <!-- A desculpa será inserida aqui pelo JavaScript -->
+            </p>
+
+            <!-- Botão de Copiar (Aparece com a desculpa) -->
+            <div class="flex justify-center">
+                <button id="btn-copiar" class="inline-flex items-center px-4 py-2 border border-transparent text-md font-medium rounded-full shadow-sm text-gray-800 bg-secondary-yellow hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-yellow transition duration-150 ease-in-out">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v1"></path></svg>
+                    Copiar
+                </button>
+            </div>
+            <!-- Mensagem de feedback (custom alert) -->
+            <p id="feedback-copia" class="text-center text-sm text-green-600 hidden">Copiado!</p>
+        </div>
+    </div>
+
+    <!-- Lógica JavaScript com Gemini API -->
+    <script>
+        // Configuração da API do Gemini
+        const apiKey = ""; 
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+        
+        // System Prompt para guiar a IA a criar desculpas fantásticas e absurdas
+        const systemPrompt = "Atue como um gerador de desculpas criativas, absurdas e fantásticas. Baseado na situação do usuário, crie uma única desculpa no formato de uma história curta e surreal. O tom deve ser divertido e cômico, mas sempre parecer uma justificativa séria. Não use formatação como títulos ou listas. A desculpa deve ser concisa e focada no evento.";
+
+        // Configuração de retentativas (exponential backoff)
+        const MAX_RETRIES = 3;
+        const INITIAL_DELAY = 1000; // 1 second
+
+        // 1. Função principal de geração de desculpas (usando a IA)
+        async function gerarDesculpa() {
+            const inputTopico = document.getElementById('topico');
+            const userQuery = inputTopico.value.trim();
+            const desculpaDisplay = document.getElementById('desculpa-gerada');
+            const resultadoCard = document.getElementById('resultado-card');
+            const btnGerar = document.getElementById('btn-gerar');
+            const loadingIndicator = document.getElementById('loading-indicator');
+
+            if (userQuery === "") {
+                desculpaDisplay.textContent = "Por favor, digite a situação para a qual você precisa de uma desculpa.";
+                resultadoCard.classList.remove('hidden');
+                return;
+            }
+
+            // Preparar UI e mostrar loading
+            desculpaDisplay.textContent = "";
+            resultadoCard.classList.remove('hidden');
+            btnGerar.disabled = true;
+            btnGerar.textContent = "Gerando...";
+            loadingIndicator.classList.remove('hidden');
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            let success = false;
+            
+            for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        if (response.status === 429 && attempt < MAX_RETRIES - 1) {
+                            const delay = INITIAL_DELAY * (2 ** attempt);
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            continue; // Tenta novamente
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Erro: Não foi possível gerar a desculpa. Tente novamente.";
+
+                    desculpaDisplay.textContent = text;
+                    success = true;
+                    break; // Sucesso, sai do loop
+
+                } catch (error) {
+                    if (attempt === MAX_RETRIES - 1) {
+                        desculpaDisplay.textContent = "Erro ao conectar com a IA. Por favor, tente novamente mais tarde.";
+                    }
+                }
+            }
+
+            // Finalizar UI e esconder loading
+            loadingIndicator.classList.add('hidden');
+            btnGerar.disabled = false;
+            btnGerar.textContent = "Gerar Desculpa";
+
+            if (!success) {
+                desculpaDisplay.textContent = desculpaDisplay.textContent || "Erro desconhecido ao gerar a desculpa.";
+            }
+        }
+
+        // 2. Função para copiar texto (com fallback)
+        function copiarDesculpa() {
+            const texto = document.getElementById('desculpa-gerada').textContent;
+            const feedback = document.getElementById('feedback-copia');
+
+            // Tenta usar a API moderna (navigator.clipboard)
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(texto).then(() => {
+                    feedback.textContent = "Desculpa copiada com sucesso!";
+                    feedback.classList.remove('hidden');
+                    setTimeout(() => feedback.classList.add('hidden'), 2000);
+                }).catch(() => {
+                    // Fallback se a API moderna falhar
+                    copiarDesculpaFallback(texto, feedback);
+                });
+            } else {
+                // Fallback mais antigo (document.execCommand)
+                copiarDesculpaFallback(texto, feedback);
+            }
+        }
+
+        function copiarDesculpaFallback(texto, feedbackElement) {
+            const textarea = document.createElement('textarea');
+            textarea.value = texto;
+            textarea.style.position = 'fixed'; // Evita que apareça na tela
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    feedbackElement.textContent = "Desculpa copiada com sucesso!";
+                    feedbackElement.classList.remove('hidden');
+                    setTimeout(() => feedbackElement.classList.add('hidden'), 2000);
+                } else {
+                    feedbackElement.textContent = "Falha ao copiar. Tente selecionar o texto manualmente.";
+                    feedbackElement.classList.remove('hidden');
+                    setTimeout(() => feedbackElement.classList.add('hidden'), 3000);
+                }
+            } catch (err) {
+                feedbackElement.textContent = "Erro ao usar comando de cópia. Tente selecionar o texto manualmente.";
+                feedbackElement.classList.remove('hidden');
+                setTimeout(() => feedbackElement.classList.add('hidden'), 3000);
+            }
+            document.body.removeChild(textarea);
+        }
+
+
+        // 3. Configuração de Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('btn-gerar').addEventListener('click', gerarDesculpa);
+            document.getElementById('btn-copiar').addEventListener('click', copiarDesculpa);
+        });
+
+    </script>
+
+</body>
+</html>
