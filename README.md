@@ -25,6 +25,7 @@ JavaScript: Lógica de interação e chamadas de API.
 Gemini API (gemini-2.5-flash): Utilizada para a geração dinâmica e criativa das desculpas.
 
 ⚙️ Como Rodar Localmente (Desenvolvimento)
+
 Se você deseja clonar o repositório e testar o código em sua máquina, siga os passos abaixo:
 
 Clone o repositório:
